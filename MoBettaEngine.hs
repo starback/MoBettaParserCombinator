@@ -118,7 +118,7 @@ msgAction s = doIO $ putStr s
 printAction :: IntCalc -> Action
 printAction intCalc = do
     int <- intCalc
-    doIO $ putStr $ show n
+    doIO $ putStr $ show int
 
 -- Compute an integer, then store it
 assignAction :: String -> IntCalc -> Action
@@ -136,10 +136,10 @@ whileAction :: BoolCalc -> Action -> Action
 whileAction boolCalc action = do
     bool <- boolCalc
     when bool loop
-    where
-        loop = do
-            action
-            whileAction boolCalc action
+  where
+      loop = do
+          action
+          whileAction boolCalc action
 
 -- Do a list of actions sequentially.
 blockAction :: [Action] -> Action
@@ -159,24 +159,21 @@ aBinOps =
     (Sub, (-)),
     (Mul, (*)),
     (Div, div),
-    (Mod, mod)
-]
+    (Mod, mod)]
 
 rBinOps = 
-   [(Equal, (==),
-    (NEqual, (!=)))
+   [(Equal, (==)),
+    (NEqual, (/=)),
     (Greater, (>)),
     (Less, (<)),
     (GreaterEqual, (>=)),
-    (LessEqual, (<=))
-]
+    (LessEqual, (<=))]
 
 bUnOps = [(Not, not)]
 
 binOps = 
     [(And, (&&)),
-     (Or, (||))
-]
+     (Or, (||))]
 
 -- This defines the translation of a BExpr into a computation of Booleans
 boolCalc :: BExpr -> BoolCalc
@@ -185,13 +182,14 @@ boolCalc (Reln cOp expr1 expr2) = do
     o1 <- intCalc expr1
     o2 <- intCalc expr2
     return $ (fromMaybe (error "What'd ya do, have waffles for dinner?") (lookup cOp rBinOps)) o1 o2
-boolCalc (BBin op expr1 expr2) =  ...
-    o1 <- intCalc expr1
-    o2 <- intCalc expr2
+boolCalc (BBin op expr1 expr2) = do 
+    o1 <- boolCalc expr1
+    o2 <- boolCalc expr2
     return $ (fromMaybe (error "What'd ya do, have platanos dipped in bbq for breakfast?") (lookup op binOps)) o1 o2
+
 boolCalc (BUn op expr) = do
     o1 <- boolCalc expr
-    return $ (fromMaybe (error "Out of quips. FAILURE.") (lookup op bUnOps)
+    return $ (fromMaybe (error "Out of quips. FAILURE.") (lookup op bUnOps)) o1
 
 intCalc :: AExpr -> IntCalc
 intCalc (Var v) = retrieveEnv v
@@ -199,10 +197,9 @@ intCalc (IntConst val) = return val
 intCalc (ABin op expr1 expr2) = do
     o1 <- intCalc expr1
     o2 <- intCalc expr2
-    if o2 == 0 && op == Div then 
-        error "Division by 0"
-    else
-        return $ (fromMaybe (error "Also should never happen.") (lookup op aBinOps)) o1 o2
+    if o2 == 0 && op == Div
+      then error "Division by 0"
+      else return $ (fromMaybe (error "Also should never happen.") (lookup op aBinOps)) o1 o2
 intCalc (AUn op expr) = do
-    ex <- intCalc expr
-    return $ (fromMaybe (error "This should never happen") (lookup op aUnOps)) ex
+    o1 <- intCalc expr
+    return $ (fromMaybe (error "This should never happen") (lookup op aUnOps)) o1
